@@ -2,8 +2,10 @@ const app = require("./server")
 const config = require("./config/dev.json")
 const { MongoClient } = require("mongodb")
 
+
 const PagesDAO = require("./controller")
 const port = 1000
+
 console.log("config: ", config.mongodb_uri);
 
 
@@ -20,3 +22,5 @@ MongoClient.connect(
       console.log(`listening on port ${port}`)
     })
   })
+
+

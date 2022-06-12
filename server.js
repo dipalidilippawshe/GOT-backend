@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require("body-parser")
+const redis = require("redis")
 const app = express()
 
 const cors = require("cors")
@@ -7,7 +8,38 @@ const cors = require("cors")
 var fs = require('fs');
 var csv = require('csvtojson');
 var async = require('async');
+const REDIS_PORT = 6379
 
+//const client= redis.createClient(REDIS_PORT);
+const redisClient = redis.createClient({host:'127.0.0.1',port:REDIS_PORT});
+redisClient.on('connect',() => {
+ console.log('connected to redis successfully!');
+})
+redisClient.on('error',(error) => {
+console.log('Redis connection error :', error);
+})
+
+
+ const get = async (req, res, next) => {
+     let key = "books";
+     await redisClient.connect();
+     console.log("outiin...t",redisClient);
+    
+     redisClient.get(key, (error, data) => {
+      console.log("I am in111 nexddt");
+       if (error) {res.status(400).send(err);}
+       if (data !== null){
+        console.log("I am in nexddt");
+        res.status(200).send(JSON.parse(data));
+       } 
+       else{
+         console.log("I am in next");
+        next();
+       } 
+      });
+      console.log("out...t");
+      next();
+ }
 //require fileshere
 var dbcontoller = require("./controller");
 app.use(cors())
@@ -15,75 +47,9 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-//reading CSv file here
-app.post('/readcsv',async(req,res)=>{
-  var inputFile='battles.csv';
-  let respArr =[];
-  csv()
-.fromFile(inputFile)
-.then(async(jsonObj)=> {
-   // console.log(jsonObj);
-   const saved = await dbcontoller.saveRecords(jsonObj);
-   res.send({status:true, data: saved});
-   
-})
-});
+app.get('/getbooks',get,dbcontoller.getListooks);
 
-app.get('/getbattles',async (req,res)=>{
 
-  const battles = await dbcontoller.getListOfBattles();
-  if(battles){
-     var response =[];
-     battles.map(a=>{
-       response.push(a.name);
-     })
-     res.send({status:true, data: response});
-
-  }else{
-    res.send({status:false, data:null})
-  }
-});
-app.get('/getcount',async (req,res)=>{
-
-  const battles = await dbcontoller.getCountOfBattels();
-  if(battles){
-     
-     res.send({status:true, data: battles});
-
-  }else{
-    res.send({status:false, data:null})
-  }
-});
-
-app.get('/search/:name',async (req,res)=>{
-
-  const battles = await dbcontoller.searchByName(req.params.name);
-  if(battles){
-    res.send({status:true, data: battles});
-  }else{
-    res.send({status:false, data:null})
-  }
-});
-app.get('/getdetail/:id',async(req,res)=>{
-  const battle = await dbcontoller.getDetailsById(req.params.id);
-  if(battle){
-    res.send({status:true, data: battle});
-  }else{
-    res.send({status:false, data:null})
-  }
-});
-
-app.get('/searchbyattacker',async(req,res)=>{
-  //req query
-  var query  = req.query;
-  console.log("req.query : ",req.query);
-  const battles = await dbcontoller.searchByTracker(query);
-  if(battles){
-    res.send({status:true, data: battles});
-  }else{
-    res.send({status:false, data:null})
-  }
-});
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
